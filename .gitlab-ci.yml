@@ -1,0 +1,8 @@
+ripmeapp:
+    image: maven:3.6.0-jdk-13
+    script: "mvn clean compile assembly:single"
+    artifacts:
+        paths:
+            - "./target/*.jar"
+    tags:
+        - docker
