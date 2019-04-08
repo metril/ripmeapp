@@ -15,6 +15,6 @@ deploy:jar:
         - build:jar
     script:
         - cd ./target
-        - jarfiles=$(find ./ -type f - name "*.jar"); mv $jarfiles[0] /cifs/atlas/gitlab_releases/RipMeApp/ripme.jar
+        - jarfiles=$(find ./ -type f -name "*.jar"); mv $jarfiles[0] /cifs/atlas/gitlab_releases/RipMeApp/ripme.jar
     tags:
         - shell
