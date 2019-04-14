@@ -1,0 +1,20 @@
+build:jar:
+    stage: build
+    image: maven:latest
+    script: mvn clean compile assembly:single
+    artifacts:
+        paths:
+            - ./target/*.jar
+        expire_in: 2 hours
+    tags:
+        - docker
+
+deploy:jar:
+    stage: deploy
+    dependencies:
+        - build:jar
+    script:
+        - cd ./target
+        - jarfile=$(find ./ -type f -name "*.jar"); mv $jarfile /cifs/atlas/gitlab_releases/RipMeApp/ripme.jar
+    tags:
+        - shell
