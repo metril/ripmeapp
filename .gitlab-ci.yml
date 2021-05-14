@@ -18,3 +18,4 @@ deploy:jar:
         - jarfile=$(find ./ -type f -name "*.jar"); mv $jarfile /cifs/atlas/gitlab_releases/RipMeApp/ripme.jar
     tags:
         - shell
+        - atlas
