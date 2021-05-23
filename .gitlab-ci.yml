@@ -11,11 +11,28 @@ build:jar:
 
 deploy:jar:
     stage: deploy
+    image:
+        name: minio/mc
+        entrypoint: ['']
     dependencies:
         - build:jar
+    before_script:
+        - mc alias set releases $MINIO_HOST $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
     script:
         - cd ./target
-        - jarfile=$(find ./ -type f -name "*.jar"); mv $jarfile /cifs/atlas/gitlab_releases/RipMeApp/ripme.jar
+        - jarfile=$(find ./ -type f -name "*.jar")
+        - mc cp $jarfile releases/RipMeApp/ripme.jar
     tags:
-        - shell
-        - atlas
+        - docker
+
+# deploy:jar:
+#     stage: deploy
+#     dependencies:
+#         - build:jar
+#     script:
+#         - cd ./target
+#         - jarfile=$(find ./ -type f -name "*.jar"); mv $jarfile /cifs/atlas/gitlab_releases/RipMeApp/ripme.jar
+#     tags:
+#         - shell
+#         - atlas
+
