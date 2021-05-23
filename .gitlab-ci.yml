@@ -20,7 +20,7 @@ deploy:jar:
         - mc alias set releases $MINIO_HOST $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
     script:
         - cd ./target
-        - jarfile=$(find ./ -type f -name "*.jar")
+        - jarfile=$(ls *.jar)
         - mc cp $jarfile releases/RipMeApp/ripme.jar
     tags:
         - docker
