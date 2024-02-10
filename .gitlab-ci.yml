@@ -34,7 +34,7 @@ build:
         - source "/root/.sdkman/bin/sdkman-init.sh"
         - sdk install gradle 8.6
     script:
-        - mvn clean compile assembly:single
+        - ./gradlew clean build
         - mc cp --recursive ./target/*.jar oci/gitlab-ripmeapp/
     tags:
         - githubrunner-ubuntu-${CI_PROJECT_ID}-${CI_PIPELINE_IID}
