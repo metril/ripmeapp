@@ -28,8 +28,8 @@ build:
         - chmod +x $HOME/.local/minio/bin/mc
         - export PATH=$PATH:$HOME/.local/minio/bin/
         - mc alias set oci $OCI_API_ENDPOINT $OCI_ACCESS_KEY $OCI_SECRET_KEY
-        - apt-get update
-        - apt-get install default-jdk
+        - apt-get -y update
+        - apt-get install -y default-jdk
         - curl -s "https://get.sdkman.io" | bash
         - sdk install gradle 8.6
     script:
