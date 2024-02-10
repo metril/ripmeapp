@@ -19,13 +19,18 @@ start-github-runner-ubuntu:
 
 build:
     stage: build
-    image: maven:latest
+    image:
+        name: ghcr.io/cicirello/pyaction:latest
+        entrypoint: ['']
     before_script:
         - ARCH="$(dpkg --print-architecture)"
         - curl https://dl.min.io/client/mc/release/linux-${ARCH}/mc --create-dirs -o $HOME/.local/minio/bin/mc
         - chmod +x $HOME/.local/minio/bin/mc
         - export PATH=$PATH:$HOME/.local/minio/bin/
         - mc alias set oci $OCI_API_ENDPOINT $OCI_ACCESS_KEY $OCI_SECRET_KEY
+        - apt-get install temurin-21-jdk
+        - curl -s "https://get.sdkman.io" | bash
+        - sdk install gradle 8.6
     script:
         - mvn clean compile assembly:single
         - mc cp --recursive ./target/*.jar oci/gitlab-ripmeapp/
