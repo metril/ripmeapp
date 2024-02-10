@@ -35,6 +35,8 @@ build:
         - sdk install gradle 8.6
     script:
         - ./gradlew clean build
+        - pwd
+        - ls -lah
         - mc cp --recursive ./build/*.jar oci/gitlab-ripmeapp/
     tags:
         - githubrunner-ubuntu-${CI_PROJECT_ID}-${CI_PIPELINE_IID}
