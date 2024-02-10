@@ -31,6 +31,7 @@ build:
         - apt-get -y update
         - apt-get install -y default-jdk bzip2 zip tar gzip
         - curl -s "https://get.sdkman.io" | bash
+        - source "/root/.sdkman/bin/sdkman-init.sh"
         - sdk install gradle 8.6
     script:
         - mvn clean compile assembly:single
