@@ -2,6 +2,7 @@ package com.rarchives.ripme.ripper.rippers;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,14 +36,14 @@ public class HitomiRipper extends AbstractHTMLRipper {
 
     @Override
     public String getGID(URL url) throws MalformedURLException {
-        Pattern p = Pattern.compile("https://hitomi.la/galleries/([\\d]+).html");
+        Pattern p = Pattern.compile("https://hitomi.la/(cg|doujinshi|gamecg|manga)/(.+).html");
         Matcher m = p.matcher(url.toExternalForm());
         if (m.matches()) {
             galleryId = m.group(1);
             return m.group(1);
         }
         throw new MalformedURLException("Expected hitomi URL format: " +
-                "https://hitomi.la/galleries/ID.html - got " + url + " instead");
+                "https://hitomi.la/(cg|doujinshi|gamecg|manga)/ID.html - got " + url + " instead");
     }
 
     @Override
@@ -65,7 +66,7 @@ public class HitomiRipper extends AbstractHTMLRipper {
     }
 
     @Override
-    public String getAlbumTitle(URL url) throws MalformedURLException {
+    public String getAlbumTitle(URL url) throws MalformedURLException, URISyntaxException {
         try {
             // Attempt to use album title and username as GID
             Document doc = Http.url(url).get();
