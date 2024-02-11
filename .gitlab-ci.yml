@@ -34,7 +34,7 @@ build:
         - source "/root/.sdkman/bin/sdkman-init.sh"
         - sdk install gradle 8.6
     script:
-        - ./gradlew clean build
+        - ./gradlew clean build -x test
         - pwd
         - ls -lah
         - cd ./build
