@@ -8,8 +8,7 @@ import java.util.List;
 
 import com.rarchives.ripme.ripper.rippers.EHentaiRipper;
 import com.rarchives.ripme.utils.RipUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 public class EhentaiRipperTest extends RippersTest {
     @Test
