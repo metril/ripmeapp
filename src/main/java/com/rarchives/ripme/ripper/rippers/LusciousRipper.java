@@ -10,6 +10,8 @@ import org.jsoup.nodes.Document;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -20,10 +22,19 @@ import java.util.regex.Pattern;
 public class LusciousRipper extends AbstractHTMLRipper {
     private static String albumid;
 
-    private static final Pattern P = Pattern.compile("^https?://(?:members\\.|legacy\\.|www\\.)?luscious.net/albums/([-_.0-9a-zA-Z]+)/?");
+    private static final Pattern p = Pattern.compile("^https?://(?:www\\.)?(?:members\\.||legacy\\.||old\\.)?luscious\\.net/albums/([-_.0-9a-zA-Z]+).*$");
 
     public LusciousRipper(URL url) throws IOException {
         super(url);
+    }
+
+    @Override
+    public URL sanitizeURL(URL url) throws MalformedURLException, URISyntaxException{
+        String URLToReturn = url.toExternalForm();
+        URLToReturn = URLToReturn.replaceAll("https?://(?:www\\.)?luscious\\.", "https://old.luscious.");
+        URL san_url = new URI(URLToReturn).toURL();
+        LOGGER.info("sanitized URL is " + san_url.toExternalForm());
+        return san_url;
     }
 
     @Override
@@ -76,7 +87,7 @@ public class LusciousRipper extends AbstractHTMLRipper {
 
     @Override
     public String getGID(URL url) throws MalformedURLException {
-        Matcher m = P.matcher(url.toExternalForm());
+        Matcher m = p.matcher(url.toExternalForm());
         if (m.matches()) {
             albumid = m.group(1).split("_")[m.group(1).split("_").length - 1];
             return m.group(1);
