@@ -37,7 +37,7 @@ build:
         - apt-get install -y default-jdk bzip2 zip tar gzip
         - curl -s "https://get.sdkman.io" | bash
         - source "/root/.sdkman/bin/sdkman-init.sh"
-        - sdk install gradle 8.6
+        - sdk install gradle 8.10
     script:
         - ./gradlew clean build -x test
         - mc cp --recursive ./build/libs/*.jar oci/gitlab-ripmeapp/
