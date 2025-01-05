@@ -39,7 +39,7 @@ build:
         - source "/root/.sdkman/bin/sdkman-init.sh"
         - sdk install gradle 8.10
     script:
-        - ./gradlew clean build -x test
+        - ./gradlew clean build -x test --warning-mode all
         - mc cp --recursive ./build/libs/*.jar oci/gitlab-ripmeapp/
     tags:
         - githubrunner-ubuntu-${CI_PROJECT_ID}-${CI_PIPELINE_IID}
