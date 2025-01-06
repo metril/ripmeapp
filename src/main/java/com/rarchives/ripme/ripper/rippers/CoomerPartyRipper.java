@@ -1,14 +1,4 @@
 package com.rarchives.ripme.ripper.rippers;
-import com.rarchives.ripme.ripper.AbstractJSONRipper;
-import com.rarchives.ripme.utils.Http;
-import com.rarchives.ripme.utils.Utils;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -19,6 +9,16 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.rarchives.ripme.ripper.AbstractJSONRipper;
+import com.rarchives.ripme.utils.Http;
+import com.rarchives.ripme.utils.Utils;
 
 /**
  * <a href="https://coomer.su/api/schema">See this link for the API schema</a>.
@@ -42,11 +42,11 @@ public class CoomerPartyRipper extends AbstractJSONRipper {
 
     // Pagination is strictly 50 posts per page, per API schema.
     private Integer pageCount = 0;
-    private static final Integer postCount = 50;    
+    private static final Integer postCount = 50;
 
     // "Service" of the page to be ripped: Onlyfans, Fansly, Candfans
     private final String service;
-    
+
     // Username of the page to be ripped
     private final String user;
 
@@ -91,7 +91,7 @@ public class CoomerPartyRipper extends AbstractJSONRipper {
 
     private JSONObject getJsonPostsForOffset(Integer offset) throws IOException {
         String apiUrl = String.format(POSTS_ENDPOINT, service, user, offset);
-        
+
         String jsonArrayString = Http.url(apiUrl)
                 .ignoreContentType()
                 .response()
@@ -133,6 +133,7 @@ public class CoomerPartyRipper extends AbstractJSONRipper {
 
     @Override
     protected void downloadURL(URL url, int index) {
+        sleep(5000);
         addURLToDownload(url, getPrefix(index));
     }
 
