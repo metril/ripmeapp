@@ -33,9 +33,9 @@ build:
         - chmod +x $HOME/.local/minio/bin/mc
         - export PATH=$PATH:$HOME/.local/minio/bin/
         - mc alias set oci $OCI_API_ENDPOINT $OCI_ACCESS_KEY $OCI_SECRET_KEY
-        - echo "deb http://deb.debian.org/debian unstable main" >> /etc/apt/sources.list.d/unstable.list
+        # - echo "deb http://deb.debian.org/debian unstable main" >> /etc/apt/sources.list.d/unstable.list
         - apt-get -y update
-        - apt-get install -y openjdk-23-jdk-headless bzip2 zip tar gzip
+        - apt-get install -y openjdk-17-jdk-headless bzip2 zip tar gzip
         - curl -s "https://get.sdkman.io" | bash
         - source "/root/.sdkman/bin/sdkman-init.sh"
         - sdk install gradle 8.10
