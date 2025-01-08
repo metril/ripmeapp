@@ -6,6 +6,10 @@
 ![alt Badge Status](https://github.com/ripmeapp2/ripme/actions/workflows/gradle.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/RipMeApp/ripme/badge.svg?branch=main)](https://coveralls.io/github/RipMeApp/ripme?branch=main)
 
+Jump to:
+- [List of Supported Sites](https://github.com/RipMeApp/ripme?tab=readme-ov-file#list-of-supported-sites)
+- [Site Not Supported?](https://github.com/RipMeApp/ripme?tab=readme-ov-file#site-not-supported)
+
 ## Recent development updates
 
 - For a while, the ripmeapp/ripme repo was inactive, but development continued at ripmeapp2/ripme.
@@ -76,25 +80,31 @@ brew install --cask ripme && xattr -d com.apple.quarantine /Applications/ripme.j
 
 ## List of Supported Sites
 
+See the full list of [Supported Sites](https://github.com/ripmeapp/ripme/wiki/Supported-Sites) in the wiki.
+
+Note: Websites change over time and therefore rippers, which fundamentally depend on website layouts, can break at any time.
+Feel free to open an issue if you notice something not working, but please search the list of issues to see if it's already been reported.
+
+The list of supported rippers includes:
+
 - imgur
-- twitter
+- twitter (currently broken, needs to be updated for X)
 - tumblr
 - instagram
 - flickr
 - photobucket
 - reddit
-- gonewild
+- redgifs
 - motherless
 - imagefap
-- imagearn
 - seenive
-- vinebox
 - 8muses
-- deviantart
+- deviantart (currently broken by major changes to the site)
 - xhamster
-- [(more)](https://github.com/ripmeapp/ripme/wiki/Supported-Sites)
+- xvideos
+- ... and [more](https://github.com/ripmeapp/ripme/wiki/Supported-Sites)!
 
-## Not Supported?
+## Site Not Supported?
 
 Request support for more sites by adding a comment to [this Github issue](https://github.com/RipMeApp/ripme/issues/2068).
 
@@ -143,45 +153,6 @@ become out of date. Start by building and testing a released version
 of RipMe and then ensure that any changes you make do not cause more
 tests to break.
 
-# Publishing a New Release
+# Maintainers: How to Publish a New Release
 
-## Create the Release
-
-edit draft release `develop build main` the following way:
-1. create a new tag with version from ripme filename, e.g. 2.1.12-7-d0b97acd
-1. set the title to same name
-1. set previous tag to release tag before, e.g.  2.1.11-20-ca96ce88
-1. press `generate release notes` button
-1. edit release text as appropriate
-1. save
-
-Another version of instructions that worked for @metaprime:
-- Push latest-main to the version you will want to publish, and wait a few minutes for automation to finish running the build
-- Go to https://github.com/RipMeApp/ripme/releases
-- Find development build main
-- Click the "Edit" button
-- Note the version in the filename for the .jar
-- Push a tag with that version number
-- Update the tag on the release to that version numbered tag that matches the .jar's name
-- Change the title on the release to match
-- Uncheck "set as a pre-release"
-- Check "set as the latest release"
-- Click "publish release"
-
-## Publish the JSON update so the update check will pick up the new release
-
-then, prepare the repo for update check, and next release:
-1. edit ripme.json, enter new hash, version and short description, and commit
-   1. Get the hash by downloading the file and computing a sha256 hash
-1. set the base tag for next release verison calculation, e.g. 2.1.13 on this commit
-1. push tag and commit
-1. remove old base tag, not needed any more, e.g. 2.1.12
-
-# New GUI - compose-jb
-As Java Swing will go away in future, a new GUI technology should be used. One of the
-candidates is [Jetpack Compose for Desktop](https://github.com/JetBrains/compose-jb/).
-
-The library leverages the compose library for android and provides it for android,
-desktop and web. The navigation library is not available for desktop, so Arkadii Ivanov
-implemented
-[decompose](https://proandroiddev.com/a-comprehensive-hundred-line-navigation-for-jetpack-desktop-compose-5b723c4f256e).
+See wiki: [How to Make a New Ripme Release](https://github.com/RipMeApp/ripme/wiki/How-to-make-a-new-ripme-release)
