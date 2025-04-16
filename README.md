@@ -3,8 +3,27 @@
 [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](/LICENSE.txt)
 [![Join the chat at https://gitter.im/RipMeApp/Lobby](https://badges.gitter.im/RipMeApp/Lobby.svg)](https://gitter.im/RipMeApp/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Subreddit](https://img.shields.io/badge/discuss-on%20reddit-blue.svg)](https://www.reddit.com/r/ripme/)
-![alt Badge Status](https://github.com/ripmeapp2/ripme/actions/workflows/gradle.yml/badge.svg)
+![alt Badge Status](https://github.com/ripmeapp/ripme/actions/workflows/gradle.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/RipMeApp/ripme/badge.svg?branch=main)](https://coveralls.io/github/RipMeApp/ripme?branch=main)
+
+## About
+
+RipMe is an album downloader (or "ripper") for various websites. This is a cross-platform tool that runs on *your* computer. Works on Windows, Linux, and Mac.
+
+![Screenshot](https://i.imgur.com/UCQNjeg.png)
+
+## Download
+
+Download `ripme.jar` from the [latest release](https://github.com/ripmeapp/ripme/releases/latest). For information about running the `.jar` file, see
+[the How To Run wiki](https://github.com/ripmeapp/ripme/wiki/How-To-Run-RipMe).
+
+## Minimum Requirements
+
+Requires Java 17 or later to run. RipMe has been tested on and is confirmed working on Windows, Linux, and Mac.
+
+Java 17 is the most modern possible Java version that allows us to support the most platforms. See [thread](https://github.com/RipMeApp/ripme/pull/2057#issuecomment-2571472016).
+
+## Supported Sites
 
 Jump to:
 - [List of Supported Sites](https://github.com/RipMeApp/ripme?tab=readme-ov-file#list-of-supported-sites)
@@ -12,40 +31,30 @@ Jump to:
 
 ## Recent development updates
 
-- For a while, the ripmeapp/ripme repo was inactive, but development continued at ripmeapp2/ripme.
+- The current active development repo for RipMe is located at [ripmeapp/ripme](https://github.com/ripmeapp/ripme/).
+- Note: For a while, the ripmeapp/ripme repo was inactive, but development continued at ripmeapp2/ripme.
 - Now, maintainers have been updated and development has been rejoined with ripmeapp/ripme where it will continue.
 - You may find a number of stale issues on ripmeapp/ripme and/or on ripmeapp2/ripme until everything is merged back together and statuses are updated.
-- The current active development repo for RipMe is located at [ripmeapp/ripme](https://github.com/ripmeapp/ripme/).
 
 ## Maintainers
 
 RipMe has been maintained with ♥️ and in our limited free time by the following
-people, roughly in order from most recent primary developer, with current
-activity marked by color of the indicator:
+people, with current expected activity level marked by color of the indicator:
 
-- **[@soloturn](https://github.com/soloturn)** 🟢,
-- **[@cyian-1756](https://github.com/cyian-1756)** 🟥,
-- **[@kevin51jiang](https://github.com/kevin51jiang)** 🟥,
-- **[@MetaPrime](https://github.com/metaprime)** 🟡,
-- and its original creator, **[@4pr0n](https://github.com/4pr0n)** 🟥.
+- **[@MetaPrime](https://github.com/metaprime)** 🟡 (2025–present)
+- **[@soloturn](https://github.com/soloturn)** 🟡 (2021–present)
+- **[@cyian-1756](https://github.com/cyian-1756)** 🟥 (2017–2020)
+- **[@kevin51jiang](https://github.com/kevin51jiang)** 🟥 (2017–2018)
+- **[@MetaPrime](https://github.com/metaprime)** 🟡 (2016–2017)
+- and its original creator, **[@4pr0n](https://github.com/4pr0n)** 🟥 (2014–2016)
 
-If you'd like to become a maintainer, ask an active maintainer to be added to the team.
+If you'd like to become a maintainer, reach out on https://gitter.im/RipMeApp/Lobby and ask an active maintainer to be added to the team.
 
 ## Contact
 
 Chat with the team and community on [gitter](https://gitter.im/RipMeApp/Lobby) and [reddit.com/r/ripme](https://www.reddit.com/r/ripme/)
 
-# About
-
-RipMe is an album ripper for various websites. It is a cross-platform tool that runs on your computer, and
-requires Java 21 or later to run. RipMe has been tested and is confirmed working on Windows, Linux, and MacOS.
-
-![Screenshot](https://i.imgur.com/UCQNjeg.png)
-
-## Downloads
-
-Download `ripme.jar` from the [latest release](https://github.com/ripmeapp2/ripme/releases). For information about running the `.jar` file, see
-[the How To Run wiki](https://github.com/ripmeapp/ripme/wiki/How-To-Run-RipMe).
+## Version Numbers
 
 The version number like `ripme-1.7.94-17-2167aa34-feature_auto_release.jar` contains a release number (`1.7.94`), given by
 a person, the number of commits since this version (`17`). The commit SHA (`2167aa34`) uniquely references the
@@ -111,7 +120,9 @@ Request support for more sites by adding a comment to [this Github issue](https:
 If you're a developer, you can add your own Ripper by following the wiki guide:
 [How To Create A Ripper for HTML Websites](https://github.com/ripmeapp/ripme/wiki/How-To-Create-A-Ripper-for-HTML-websites).
 
-# Compiling & Building
+# Maintainers
+
+## Compiling & Building
 
 The project uses [Gradle](https://gradle.org).
 
@@ -170,7 +181,7 @@ manual verification of functionality of a work in progress, run the following:
 The generated JAR (java archive) in build/libs will include all
 dependencies.
 
-# Running Tests
+## Running Tests
 
 Tests can be tagged as beeing slow, or flaky. The gradle build reacts to
 the following combinations of tags:
@@ -198,6 +209,6 @@ become out of date. Start by building and testing a released version
 of RipMe and then ensure that any changes you make do not cause more
 tests to break.
 
-# Maintainers: How to Publish a New Release
+## Maintainers: How to Publish a New Release
 
 See wiki: [How to Make a New Ripme Release](https://github.com/RipMeApp/ripme/wiki/How-to-make-a-new-ripme-release)
