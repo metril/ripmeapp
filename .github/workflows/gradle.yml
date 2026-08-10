@@ -7,6 +7,7 @@ on:
       - '**'
     tags:
       - '!**'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,10 +16,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        java: [23]
-        include: # test old java on one os only, upload from ubuntu java-17
+        java: [26]
+        include: # test old java on one os only, upload from ubuntu java-21
           - os: ubuntu-latest
-            java: 17
+            java: 21
             upload: true
 
     steps:
@@ -39,6 +40,12 @@ jobs:
     - name: Build with Gradle
       run: gradle clean build -PjavacRelease=${{ matrix.java }}
 
+    - name: Publish Test Report
+      uses: mikepenz/action-junit-report@v6
+      if: success() || failure() # always run even if the previous step fails
+      with:
+        report_paths: '**/build/test-results/test/TEST-*.xml'
+
     - name: SHA256
       if: matrix.upload
       run: shasum -a 256 build/libs/*.jar
@@ -52,7 +59,7 @@ jobs:
 
     - name: create pre-release
       id: create-pre-release
-      if: matrix.upload
+      if: matrix.upload && github.ref == 'refs/heads/main'
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
