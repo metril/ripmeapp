@@ -15,9 +15,13 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
@@ -40,6 +44,7 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import com.rarchives.ripme.ripper.AbstractRipper;
 import com.rarchives.ripme.uiUtils.ContextActionProtections;
 import com.rarchives.ripme.utils.RipUtils;
+import com.rarchives.ripme.utils.TransferRate;
 import com.rarchives.ripme.utils.Utils;
 
 /**
@@ -49,15 +54,14 @@ public final class MainWindow implements Runnable, RipStatusHandler {
 
     private static final Logger LOGGER = LogManager.getLogger(MainWindow.class);
 
-    /* not static! */
-    private boolean isRipping = false; // Flag to indicate if we're ripping something
-
     private static JFrame mainFrame;
 
     private static JTextField ripTextfield;
     private static JButton ripButton, stopButton;
+    private static JButton panicButton;
 
     private static JLabel statusLabel;
+    private static final JLabel transferRateLabel = new JLabel();
     private static JButton openButton;
     private static JProgressBar statusProgress;
 
@@ -69,6 +73,8 @@ public final class MainWindow implements Runnable, RipStatusHandler {
     private static JButton optionLog;
     private static JPanel logPanel;
     private static JTextPane logText;
+    private static final Queue<Integer> logLineLengths = new LinkedList<>();
+    private static final int MAX_LOG_PANE_LINES = 1000;
 
     // History
     private static JButton optionHistory;
@@ -129,6 +135,27 @@ public final class MainWindow implements Runnable, RipStatusHandler {
 
     private static AbstractRipper ripper;
 
+    private static final AtomicBoolean gracefulStop = new AtomicBoolean(false); // Allow active transfers to finish, then stop ripping.
+    private static final AtomicBoolean panicStop = new AtomicBoolean(false); // Immediately stop active transfers, then stop ripping.
+    private static final AtomicBoolean isRipperActive = new AtomicBoolean(false);
+
+    public static final int TRANSFER_RATE_REFRESH_RATE = 200;
+    private static final TransferRate transferRate = new TransferRate();
+
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    private Future<?> rateRefresherFuture = null;
+    private final Runnable rateRefresher = () -> {
+        if (!isRipperActive.get()) {
+            if (rateRefresherFuture != null) {
+                rateRefresherFuture.cancel(true);
+                rateRefresherFuture = null;
+            }
+            transferRateLabel.setText("");
+            return;
+        }
+        transferRateLabel.setText(transferRate.formatHumanTransferRate());
+    };
+
     private void updateQueue(DefaultListModel<Object> model) {
         if (model == null)
             model = queueListModel;
@@ -169,7 +196,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setLayout(new GridBagLayout());
 
-        createUI(mainFrame.getContentPane());
+        createUI((JPanel) mainFrame.getContentPane());
         pack();
 
         loadHistory();
@@ -255,7 +282,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
                 && !configurationPanel.isVisible());
     }
 
-    private void createUI(Container pane) {
+    private void createUI(JPanel pane) {
         // If creating the tray icon fails, ignore it.
         try {
             setupTrayIcon();
@@ -263,7 +290,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
             LOGGER.warn(e.getMessage());
         }
 
-        EmptyBorder emptyBorder = new EmptyBorder(5, 5, 5, 5);
+        pane.setBorder(new EmptyBorder(5, 5, 5, 5));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1;
@@ -280,6 +307,8 @@ public final class MainWindow implements Runnable, RipStatusHandler {
                 | IllegalAccessException e) {
             LOGGER.error("[!] Exception setting system theme:", e);
         }
+
+        Font monospaced = new Font(Font.MONOSPACED, Font.PLAIN, mainFrame.getContentPane().getFont().getSize());
 
         ripTextfield = new JTextField("", 20);
         ripTextfield.addMouseListener(new ContextMenuMouseListener(ripTextfield));
@@ -327,13 +356,14 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         ripButton = new JButton("<html><font size=\"5\"><b>Rip</b></font></html>", ripIcon);
         stopButton = new JButton("<html><font size=\"5\"><b>Stop</b></font></html>");
         stopButton.setEnabled(false);
+        panicButton = new JButton("<html><font size=\"5\"><b>Panic!</b></font></html>");
+        panicButton.setEnabled(false);
         try {
             Image stopIcon = ImageIO.read(getClass().getClassLoader().getResource("stop.png"));
             stopButton.setIcon(new ImageIcon(stopIcon));
         } catch (Exception ignored) {
         }
         JPanel ripPanel = new JPanel(new GridBagLayout());
-        ripPanel.setBorder(emptyBorder);
 
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 0;
@@ -349,28 +379,37 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         ripPanel.add(ripButton, gbc);
         gbc.gridx = 3;
         ripPanel.add(stopButton, gbc);
+        gbc.gridx = 4;
+        ripPanel.add(panicButton, gbc);
         gbc.weightx = 1;
 
         statusLabel = new JLabel(Utils.getLocalizedString("inactive"));
         statusLabel.setHorizontalAlignment(JLabel.CENTER);
+        transferRateLabel.setHorizontalAlignment(JLabel.RIGHT);
+        transferRateLabel.setFont(monospaced);
         openButton = new JButton();
         openButton.setVisible(false);
         JPanel statusPanel = new JPanel(new GridBagLayout());
-        statusPanel.setBorder(emptyBorder);
 
         gbc.gridx = 0;
+        gbc.weightx = 1;
         statusPanel.add(statusLabel, gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0;
+        statusPanel.add(transferRateLabel, gbc);
+        gbc.gridx = 0;
+        gbc.weightx = 1;
+        gbc.gridwidth = 2;
         gbc.gridy = 1;
         statusPanel.add(openButton, gbc);
         gbc.gridy = 0;
+        gbc.gridwidth = 1;
 
         JPanel progressPanel = new JPanel(new GridBagLayout());
-        progressPanel.setBorder(emptyBorder);
         statusProgress = new JProgressBar(0, 100);
         progressPanel.add(statusProgress, gbc);
 
         JPanel optionsPanel = new JPanel(new GridBagLayout());
-        optionsPanel.setBorder(emptyBorder);
         optionLog = new JButton(Utils.getLocalizedString("Log"));
         optionHistory = new JButton(Utils.getLocalizedString("History"));
         optionQueue = new JButton(Utils.getLocalizedString("queue"));
@@ -392,6 +431,13 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         } catch (Exception e) {
             LOGGER.warn(e.getMessage());
         }
+
+        // Prevent button sizes/positions from shifting when text bolds/unbolds
+        optionLog.setPreferredSize(optionLog.getPreferredSize());
+        optionHistory.setPreferredSize(optionHistory.getPreferredSize());
+        optionQueue.setPreferredSize(optionQueue.getPreferredSize());
+        optionConfiguration.setPreferredSize(optionConfiguration.getPreferredSize());
+
         gbc.gridx = 0;
         optionsPanel.add(optionLog, gbc);
         gbc.gridx = 1;
@@ -402,7 +448,6 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         optionsPanel.add(optionConfiguration, gbc);
 
         logPanel = new JPanel(new GridBagLayout());
-        logPanel.setBorder(emptyBorder);
         logText = new JTextPane();
         logText.setEditable(false);
         JScrollPane logTextScroll = new JScrollPane(logText);
@@ -416,7 +461,6 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         gbc.weighty = 0;
 
         historyPanel = new JPanel(new GridBagLayout());
-        historyPanel.setBorder(emptyBorder);
         historyPanel.setVisible(false);
         historyPanel.setPreferredSize(new Dimension(300, 250));
 
@@ -498,7 +542,6 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         gbc.ipady = 0;
         JPanel historyButtonPanel = new JPanel(new GridBagLayout());
         historyButtonPanel.setSize(new Dimension(300, 10));
-        historyButtonPanel.setBorder(emptyBorder);
         gbc.gridx = 0;
         historyButtonPanel.add(historyButtonRemove, gbc);
         gbc.gridx = 1;
@@ -512,7 +555,6 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         historyPanel.add(historyButtonPanel, gbc);
 
         queuePanel = new JPanel(new GridBagLayout());
-        queuePanel.setBorder(emptyBorder);
         queuePanel.setVisible(false);
         queuePanel.setPreferredSize(new Dimension(300, 250));
         queueListModel = new DefaultListModel<>();
@@ -539,7 +581,6 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         gbc.ipady = 0;
 
         configurationPanel = new JPanel(new GridBagLayout());
-        configurationPanel.setBorder(emptyBorder);
         configurationPanel.setVisible(false);
 
         // TODO Configuration components
@@ -688,58 +729,13 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         return field;
     }
 
-    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JLabel thing1ToAdd,
-            JButton thing2ToAdd) {
+    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JComponent thing1ToAdd,
+            JComponent thing2ToAdd) {
         gbc.gridy = gbcYValue;
         gbc.gridx = 0;
         configurationPanel.add(thing1ToAdd, gbc);
         gbc.gridx = 1;
         configurationPanel.add(thing2ToAdd, gbc);
-    }
-
-    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JLabel thing1ToAdd,
-            JTextField thing2ToAdd) {
-        gbc.gridy = gbcYValue;
-        gbc.gridx = 0;
-        configurationPanel.add(thing1ToAdd, gbc);
-        gbc.gridx = 1;
-        configurationPanel.add(thing2ToAdd, gbc);
-    }
-
-    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JCheckBox thing1ToAdd,
-            JCheckBox thing2ToAdd) {
-        gbc.gridy = gbcYValue;
-        gbc.gridx = 0;
-        configurationPanel.add(thing1ToAdd, gbc);
-        gbc.gridx = 1;
-        configurationPanel.add(thing2ToAdd, gbc);
-    }
-
-    @SuppressWarnings("rawtypes")
-    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JCheckBox thing1ToAdd,
-            JComboBox thing2ToAdd) {
-        gbc.gridy = gbcYValue;
-        gbc.gridx = 0;
-        configurationPanel.add(thing1ToAdd, gbc);
-        gbc.gridx = 1;
-        configurationPanel.add(thing2ToAdd, gbc);
-    }
-
-    @SuppressWarnings("rawtypes")
-    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JComboBox thing1ToAdd,
-            JButton thing2ToAdd) {
-        gbc.gridy = gbcYValue;
-        gbc.gridx = 0;
-        configurationPanel.add(thing1ToAdd, gbc);
-        gbc.gridx = 1;
-        configurationPanel.add(thing2ToAdd, gbc);
-    }
-
-    @SuppressWarnings({ "unused", "rawtypes" })
-    private void addItemToConfigGridBagConstraints(GridBagConstraints gbc, int gbcYValue, JComboBox thing1ToAdd) {
-        gbc.gridy = gbcYValue;
-        gbc.gridx = 0;
-        configurationPanel.add(thing1ToAdd, gbc);
     }
 
     private void changeLocale() {
@@ -811,13 +807,32 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         stopButton.addActionListener(event -> {
             if (ripper != null) {
                 ripper.stop();
-                isRipping = false;
+                gracefulStop.set(true);
+                queueListModel.add(0, ripper.getURL().toString());
                 stopButton.setEnabled(false);
                 statusProgress.setValue(0);
                 statusProgress.setVisible(false);
                 pack();
                 statusProgress.setValue(0);
-                status(Utils.getLocalizedString("download.interrupted"));
+                //status(Utils.getLocalizedString("download.interrupted"));
+                status("Rip gracefully stopping");
+                appendLog("Download interrupted", Color.RED);
+            }
+        });
+
+        panicButton.addActionListener(event -> {
+            if (ripper != null) {
+                ripper.stop();
+                ripper.panic();
+                panicStop.set(true);
+                queueListModel.add(0, ripper.getURL().toString());
+                stopButton.setEnabled(false);
+                panicButton.setEnabled(false);
+                statusProgress.setValue(0);
+                statusProgress.setVisible(false);
+                pack();
+                statusProgress.setValue(0);
+                status("Rip interrupted"); // TODO localize
                 appendLog("Download interrupted", Color.RED);
             }
         });
@@ -1070,10 +1085,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
             @Override
             public void intervalAdded(ListDataEvent arg0) {
                 updateQueue();
-
-                if (!isRipping) {
-                    ripNextAlbum();
-                }
+                ripNextAlbum();
             }
 
             @Override
@@ -1087,24 +1099,14 @@ public final class MainWindow implements Runnable, RipStatusHandler {
     }
 
     private void setLogLevel(String level) {
-        // default level is error, set in case something else is given.
-        Level newLevel = Level.ERROR;
         level = level.substring(level.lastIndexOf(' ') + 1);
-        switch (level) {
-        case "Debug":
-            newLevel = Level.DEBUG;
-            break;
-        case "Info":
-            newLevel = Level.INFO;
-            break;
-        case "Warn":
-            newLevel = Level.WARN;
-        }
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        Configuration config = ctx.getConfiguration();
-        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-        loggerConfig.setLevel(newLevel);
-        ctx.updateLoggers();  // This causes all Loggers to refetch information from their LoggerConfig.
+        Level newLevel = switch (level) {
+            case "Debug" -> Level.DEBUG;
+            case "Info" -> Level.INFO;
+            case "Warn" -> Level.WARN;
+            default -> Level.ERROR;
+        };
+        Utils.configureLogger(newLevel);
     }
 
     private void setupTrayIcon() {
@@ -1257,7 +1259,11 @@ public final class MainWindow implements Runnable, RipStatusHandler {
         StyledDocument sd = logText.getStyledDocument();
         try {
             synchronized (this) {
+                if (logLineLengths.size() > MAX_LOG_PANE_LINES) {
+                    sd.remove(0, logLineLengths.remove());
+                }
                 sd.insertString(sd.getLength(), text + "\n", sas);
+                logLineLengths.add(text.length() + 1);
             }
         } catch (BadLocationException e) {
             LOGGER.warn(e.getMessage());
@@ -1311,6 +1317,10 @@ public final class MainWindow implements Runnable, RipStatusHandler {
                 });
             }
         }
+        if (!HISTORY.isEmpty()) {
+            // Fix "WARNING: row index is bigger than sorter's row count. Most likely this is a wrong sorter usage"
+            historyTableModel.fireTableDataChanged();
+        }
     }
 
     private void saveHistory() {
@@ -1329,33 +1339,63 @@ public final class MainWindow implements Runnable, RipStatusHandler {
     }
 
     private void ripNextAlbum() {
-        isRipping = true;
+        LOGGER.debug("ripNextAlbum called");
+        if (isRipperActive.getAndSet(true)) {
+            // Already ripping
+            LOGGER.debug("already ripping");
+            return;
+        }
 
         // Save current state of queue to configuration.
         Utils.setConfigList("queue", queueListModel.elements());
 
+        boolean wasGracefulStop = gracefulStop.getAndSet(false);
+        boolean wasPanicStop = gracefulStop.getAndSet(false);
+        if (wasGracefulStop || wasPanicStop) {
+            // Stop requested
+            LOGGER.debug("wasGracefulStop or wasPanicStop");
+            ripFinishCleanup();
+            return;
+        }
+
         if (queueListModel.isEmpty()) {
             // End of queue
-            isRipping = false;
+            ripFinishCleanup();
             return;
+        }
+
+        if (rateRefresherFuture == null || rateRefresherFuture.isDone()) {
+            rateRefresherFuture = executor.scheduleAtFixedRate(rateRefresher, 0, TRANSFER_RATE_REFRESH_RATE, TimeUnit.MILLISECONDS);
         }
 
         String nextAlbum = (String) queueListModel.remove(0);
 
         updateQueue();
 
+        LOGGER.debug("calling ripAlbum(\"{}\")", nextAlbum);
         Thread t = ripAlbum(nextAlbum);
         if (t == null) {
+            LOGGER.debug("ripAlbum() returned null");
             try {
                 Thread.sleep(500);
             } catch (InterruptedException ie) {
                 LOGGER.error(Utils.getLocalizedString("interrupted.while.waiting.to.rip.next.album"), ie);
             }
 
+            isRipperActive.set(false);
             ripNextAlbum();
         } else {
+            LOGGER.debug("Starting new ripper thread");
             t.start();
         }
+    }
+
+    private void ripFinishCleanup() {
+        stopButton.setEnabled(false);
+        panicButton.setEnabled(false);
+        isRipperActive.set(false);
+        statusProgress.setValue(0);
+        statusProgress.setVisible(false);
     }
 
     private Thread ripAlbum(String urlString) {
@@ -1378,12 +1418,15 @@ public final class MainWindow implements Runnable, RipStatusHandler {
             return null;
         }
         stopButton.setEnabled(true);
+        panicButton.setEnabled(true);
         statusProgress.setValue(100);
         openButton.setVisible(false);
         statusLabel.setVisible(true);
+        transferRateLabel.setVisible(true);
         pack();
         boolean failed = false;
         try {
+            LOGGER.debug("Creating ripper for url {}", url);
             ripper = AbstractRipper.getRipper(url);
             ripper.setup();
         } catch (Exception e) {
@@ -1487,9 +1530,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
                 mainWindow.statusWithColor("This URL is already in queue: " + url, Color.ORANGE);
                 ripTextfield.setText("");
             }
-            else if(!mainWindow.isRipping){
-                mainWindow.ripNextAlbum();
-            }
+            mainWindow.ripNextAlbum();
         }
     }
 
@@ -1508,18 +1549,22 @@ public final class MainWindow implements Runnable, RipStatusHandler {
     }
 
     private synchronized void handleEvent(StatusEvent evt) {
-        if (ripper.isStopped()) {
+        RipStatusMessage msg = evt.msg;
+        RipStatusMessage.STATUS status = msg.getStatus();
+
+        // CHUNK_BYTES is noisy, so handle it before any other computation
+        if (status == RipStatusMessage.STATUS.CHUNK_BYTES) {
+            transferRate.addChunk((Long) msg.getObject());
+            transferRateLabel.setText(transferRate.formatHumanTransferRate());
             return;
         }
-
-        RipStatusMessage msg = evt.msg;
 
         int completedPercent = evt.ripper.getCompletionPercentage();
         statusProgress.setValue(completedPercent);
         statusProgress.setVisible(true);
         status(evt.ripper.getStatusText());
 
-        switch (msg.getStatus()) {
+        switch (status) {
         case LOADING_RESOURCE:
         case DOWNLOAD_STARTED:
             if (LOGGER.isEnabled(Level.INFO)) {
@@ -1557,12 +1602,11 @@ public final class MainWindow implements Runnable, RipStatusHandler {
             if (LOGGER.isEnabled(Level.ERROR)) {
                 appendLog((String) msg.getObject(), Color.RED);
             }
-            stopButton.setEnabled(false);
-            statusProgress.setValue(0);
-            statusProgress.setVisible(false);
             openButton.setVisible(false);
+            ripFinishCleanup();
             pack();
             statusWithColor("Error: " + msg.getObject(), Color.RED);
+            ripNextAlbum();
             break;
 
         case RIP_COMPLETE:
@@ -1590,9 +1634,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
                 Utils.playSound("camera.wav");
             }
             saveHistory();
-            stopButton.setEnabled(false);
-            statusProgress.setValue(0);
-            statusProgress.setVisible(false);
+            Utils.saveConfig();
             openButton.setVisible(true);
             Path f = rsc.dir;
             String prettyFile = Utils.shortenPath(f);
@@ -1649,6 +1691,7 @@ public final class MainWindow implements Runnable, RipStatusHandler {
                     LOGGER.error(e);
                 }
             });
+            ripFinishCleanup();
             pack();
             ripNextAlbum();
             break;
@@ -1662,10 +1705,8 @@ public final class MainWindow implements Runnable, RipStatusHandler {
             if (LOGGER.isEnabled(Level.ERROR)) {
                 appendLog((String) msg.getObject(), Color.RED);
             }
-            stopButton.setEnabled(false);
-            statusProgress.setValue(0);
-            statusProgress.setVisible(false);
             openButton.setVisible(false);
+            ripFinishCleanup();
             pack();
             statusWithColor("Error: " + msg.getObject(), Color.RED);
             break;
